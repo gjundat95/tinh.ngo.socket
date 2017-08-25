@@ -1,12 +1,13 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class Server {
 
-    private List<Socket> sockets;
+    private List<ServerThread> sockets = new ArrayList<>();
     private ServerSocket serverSocket;
     private BufferedWriter bufferedWriter;
     private BufferedReader bufferedReader;
@@ -19,60 +20,76 @@ public class Server {
             System.exit(1);
         }
 
-        try {
-            System.out.print("Waiting client...\n");
-            Socket socket = serverSocket.accept();
-            System.out.print("socket connect: "+socket.getRemoteSocketAddress()+"\n");
+        while (true) {
+            try {
+                System.out.print("Waiting client...\n");
+                Socket socket = serverSocket.accept();
+                System.out.print("socket connect: "+socket.getRemoteSocketAddress()+"\n");
 
-            bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                ServerThread serverThread = new ServerThread(socket);
+                sockets.add(serverThread);
+                Thread thread = new Thread(serverThread);
+                thread.start();
 
-        } catch (IOException e) {
-            e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
-        try {
+    }
 
-//            Thread thread = new Thread(new ServerThread(bufferedWriter));
-//            thread.start();
+    class ServerThread implements Runnable {
 
-            String response;
-            while ((response = bufferedReader.readLine()) != null){
-                System.out.print("\nMessage: "+response+"\n");
+        private BufferedWriter bufferedWriter;
+        private BufferedReader bufferedReader;
+        private PrintWriter printWriter;
+        private Socket socket;
+
+        public ServerThread(Socket socket){
+            this.socket = socket;
+            try {
+                this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+                this.printWriter = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
+                this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            } catch (IOException e) {
+                e.printStackTrace();
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
+        public void sendMessage(String msg){
+            this.printWriter.print(msg);
+            try {
+                this.bufferedWriter.write(msg);
+                this.bufferedWriter.newLine();
+                this.bufferedWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void sendToAnyOne(String msg){
+            for(ServerThread item: sockets){
+                item.sendMessage(msg);
+            }
+        }
+
+        @Override
+        public void run() {
+
+            try {
+                String response;
+                while ((response = this.bufferedReader.readLine()) != null){
+                    sendToAnyOne(response);
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
     }
 
 }
 
 
-//class ServerThread implements Runnable {
-//
-//    private BufferedWriter bufferedWriter;
-//    private Scanner scanner = new Scanner(System.in);
-//
-//
-//    public ServerThread(BufferedWriter bufferedWriter){
-//        this.bufferedWriter = bufferedWriter;
-//    }
-//
-//    @Override
-//    public void run() {
-//        try {
-//            while (true) {
-//                System.out.print("\nChat: ");
-//                String text = scanner.nextLine();
-//                bufferedWriter.write(text);
-//                bufferedWriter.newLine();
-//                bufferedWriter.flush();
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//    }
-//}

@@ -24,7 +24,9 @@ public class Server {
             try {
                 System.out.print("Waiting client...\n");
                 Socket socket = serverSocket.accept();
-                System.out.print("socket connect: "+socket.getRemoteSocketAddress()+"\n");
+                System.out.print("getRemoteSocketAddress: "+socket.getRemoteSocketAddress()+"\n");
+                System.out.print("getLocalAddress: "+socket.getLocalAddress()+"\n");
+                System.out.print("channel: "+socket.getChannel()+"\n");
 
                 ServerThread serverThread = new ServerThread(socket);
                 sockets.add(serverThread);
@@ -42,14 +44,12 @@ public class Server {
 
         private BufferedWriter bufferedWriter;
         private BufferedReader bufferedReader;
-        private PrintWriter printWriter;
         private Socket socket;
 
         public ServerThread(Socket socket){
             this.socket = socket;
             try {
                 this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-                this.printWriter = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
                 this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             } catch (IOException e) {
                 e.printStackTrace();
@@ -58,7 +58,6 @@ public class Server {
         }
 
         public void sendMessage(String msg){
-            this.printWriter.print(msg);
             try {
                 this.bufferedWriter.write(msg);
                 this.bufferedWriter.newLine();

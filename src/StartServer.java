@@ -6,7 +6,7 @@ import static java.lang.Thread.sleep;
 
 public class StartServer {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
        Server server = new Server();
     }
 }

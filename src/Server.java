@@ -3,76 +3,86 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 public class Server {
 
-    private List<ServerThread> sockets = new ArrayList<>();
+    private List<ManagerServer> managerClients = new ArrayList<>();
+    private List<String> users = new ArrayList<>();
     private ServerSocket serverSocket;
-    private BufferedWriter bufferedWriter;
-    private BufferedReader bufferedReader;
 
-    public Server () {
-        try {
-            serverSocket = new ServerSocket(9999);
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
+
+    public Server () throws IOException {
+
+        serverSocket = new ServerSocket(9999);
 
         while (true) {
-            try {
-                System.out.print("Waiting client...\n");
-                Socket socket = serverSocket.accept();
-                System.out.print("socket connect: "+socket.getRemoteSocketAddress()+"\n");
+            System.out.print("Waiting client...\n");
 
-                ServerThread serverThread = new ServerThread(socket);
-                sockets.add(serverThread);
-                Thread thread = new Thread(serverThread);
-                thread.start();
+            Socket socket = serverSocket.accept();
+            System.out.print("socket connect: "+socket.getRemoteSocketAddress()+"\n");
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            ManagerServer managerServer = new ManagerServer(socket);
+            managerClients.add(managerServer);
+
+            Thread serverThread = new Thread(managerServer);
+            serverThread.start();
+
+            showAllUser();
+
         }
 
     }
 
-    class ServerThread implements Runnable {
+    public void showAllUser() {
+        System.out.print("------------------------------------------- \n");
+        System.out.print("List user: \n");
+        for (ManagerServer client: managerClients){
+            System.out.println(client.userName);
+        }
+        System.out.print("------------------------------------------- \n");
+    }
+
+    public void sendToAll(String userName, String msg) throws IOException {
+        for(ManagerServer client: managerClients){
+            if(!client.userName.equals(userName)){
+                client.sendMessage(userName+": "+msg);
+            }
+        }
+    }
+
+    public void sendToUser(String userNameSend, String msg, String userNameReceive) throws IOException {
+        for(ManagerServer client: managerClients){
+            if(client.userName.equals(userNameReceive)){
+                client.sendMessage(userNameSend+": "+msg);
+            }
+        }
+    }
+
+    class ManagerServer implements Runnable {
 
         private BufferedWriter bufferedWriter;
         private BufferedReader bufferedReader;
-        private PrintWriter printWriter;
+        private String userName;
         private Socket socket;
 
-        public ServerThread(Socket socket){
+        public ManagerServer(Socket socket) throws IOException {
+
             this.socket = socket;
-            try {
-                this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-                this.printWriter = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
-                this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+
+            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            userName = bufferedReader.readLine();
+            users.add(userName);
 
         }
 
-        public void sendMessage(String msg){
-            this.printWriter.print(msg);
-            try {
-                this.bufferedWriter.write(msg);
-                this.bufferedWriter.newLine();
-                this.bufferedWriter.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        public void sendMessage(String msg) throws IOException {
+            this.bufferedWriter.write(msg);
+            this.bufferedWriter.newLine();
+            this.bufferedWriter.flush();
         }
 
-        public void sendToAnyOne(String msg){
-            for(ServerThread item: sockets){
-                item.sendMessage(msg);
-            }
-        }
 
         @Override
         public void run() {
@@ -80,7 +90,14 @@ public class Server {
             try {
                 String response;
                 while ((response = this.bufferedReader.readLine()) != null){
-                    sendToAnyOne(response);
+
+                   if (!response.equals("") && response.contains("-")){
+                       sendToUser(userName, response.split("-")[1], response.split("-")[0]);
+
+                   }else {
+                       //sendToAll(userName, response);
+
+                   }
                 }
 
             } catch (IOException e) {

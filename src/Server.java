@@ -17,7 +17,6 @@ public class Server {
 
         while (true) {
             System.out.print("Waiting client...\n");
-
             Socket socket = serverSocket.accept();
             System.out.print("socket connect: "+socket.getRemoteSocketAddress()+"\n");
 
@@ -26,11 +25,9 @@ public class Server {
 
             Thread serverThread = new Thread(managerServer);
             serverThread.start();
-
             showAllUser();
 
         }
-
     }
 
     public void showAllUser() {
@@ -68,14 +65,13 @@ public class Server {
         public ManagerServer(Socket socket) throws IOException {
 
             this.socket = socket;
-
             this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
             userName = bufferedReader.readLine();
             users.add(userName);
 
-        }
+}
 
         public void sendMessage(String msg) throws IOException {
             this.bufferedWriter.write(msg);
